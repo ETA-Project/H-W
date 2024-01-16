@@ -4,13 +4,15 @@
 
 MS5611 sensor;
 
-const char* ssid = "your_SSID";     // Wi-Fi SSID
-const char* password = "your_PASSWORD"; // Wi-Fi Password
-const char* serverUrl = "server_url";   // Spring 서버 URL (예: "http://192.168.1.100")
-const int serverPort = 8080;            // Spring 서버 포트 (예: 8080)
-const String endpoint = "/data";        // Spring 서버 엔드포인트 (예: "/api/pressure")
+// const char* ssid = "KT_IPTV_WiFi_5G_876E";     // Wi-Fi SSID
+// const char* password = "ixwgpr79hkam"; // Wi-Fi Password
 
-const int ledPin = LED_BUILTIN;        // NodeMCU의 내장 LED 핀
+const char* ssid = "zz";     // Wi-Fi SSID
+const char* password = "00000000"; // Wi-Fi Password
+const char* serverUrl = "ec2-13-124-153-108.ap-northeast-2.compute.amazonaws.com"; // 서버 URL
+const int serverPort = 8080; // 서버 포트
+
+const int ledPin = LED_BUILTIN; // NodeMCU의 내장 LED 핀
 
 WiFiClient client;
 
@@ -21,40 +23,69 @@ void setup() {
   pinMode(ledPin, OUTPUT); // LED 핀을 출력 모드로 설정
 
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to Wi-Fi");
+  Serial.println("Connecting to Wi-Fi");
+
+  unsigned long startTime = millis(); // 시작 시간 기록
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("Connected to Wi-Fi");
+  Serial.println("\nConnected to Wi-Fi");
+
+  // WiFi.mode(WIFI_STA);
+  // WiFi.disconnect();
+  // delay(100);
+
+  // Serial.println("Setup done");
 }
 
 void loop() {
-  if (sensor.read()) {
-    double pressure = sensor.getPressure();
-    double temperature = sensor.getTemperature();
-    Serial.print("Pressure: ");
-    Serial.print(pressure);
-    Serial.print(" mbar, Temperature: ");
-    Serial.print(temperature);
-    Serial.println(" C");
+  sensor.read();
+  double pressure = sensor.getPressure();
+  Serial.print("Pressure: ");
+  Serial.print(pressure);
+  Serial.println(" mbar");
 
-    if (client.connect(serverUrl, serverPort)) {
-      String postData = "pressure=" + String(pressure);
-      client.println("POST " + endpoint + " HTTP/1.1");
-      client.println("Host: " + String(serverUrl));
-      client.println("Content-Type: application/x-www-form-urlencoded");
-      client.println("Content-Length: " + postData.length());
-      client.println();
-      client.println(postData);
-    }
-    
-    digitalWrite(ledPin, LOW); // 센서에서 데이터를 읽었으므로 LED 끄기
-  } else {
-    Serial.println("센서에서 데이터를 읽지 못함");
-    Serial.println("센서 읽기 실패, 센서 상태 또는 연결을 확인하세요.");
-    digitalWrite(ledPin, HIGH); // 데이터를 읽지 못했으므로 LED 켜기
+  if (client.connect(serverUrl, serverPort)) {
+    String getUrl = "/eta/update/1/" + String(pressure);
+    client.println("GET " + getUrl + " HTTP/1.1");
+    client.println("Host: " + String(serverUrl));
+    client.println("Connection: close");
+    client.println();
   }
 
+  digitalWrite(ledPin, LOW); // 센서에서 데이터를 읽었으므로 LED 끄기
+  
+
   delay(5000); // 5초 간격으로 데이터 읽기 및 전송
+
+
+  // Serial.println("scan start");
+
+  // // WiFi.scanNetworks will return the number of networks found
+  // int n = WiFi.scanNetworks();
+  // Serial.println("scan done");
+  // if (n == 0)
+  //   Serial.println("no networks found");
+  // else
+  // {
+  //   Serial.print(n);
+  //   Serial.println(" networks found");
+  //   for (int i = 0; i < n; ++i)
+  //   {
+  //     // Print SSID and RSSI for each network found
+  //     Serial.print(i + 1);
+  //     Serial.print(": ");
+  //     Serial.print(WiFi.SSID(i));
+  //     Serial.print(" (");
+  //     Serial.print(WiFi.RSSI(i));
+  //     Serial.print(")");
+  //     Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+  //     delay(10);
+  //   }
+  // }
+  // Serial.println("");
+
+  // // Wait a bit before scanning again
+  // delay(5000);
 }
